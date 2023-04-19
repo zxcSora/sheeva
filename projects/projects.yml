@@ -1,0 +1,98 @@
+---
+projects:
+  - name: "example-Project"
+    description: "Example-Project"
+    state: "present"
+    #namespace_old: "test-namespace/gac-group1"
+    namespace: "test-namespace/gac-group0"
+    avatar: "projects/logos/nats.png"
+    clean_unmanaged_variables: true
+    ci_config_path: ".second/path/to/ci"
+    variables_file: "projects/variables/10-application.yml"
+    sched:
+      - ref: "master"
+        description: "cron-sys"
+        cron: "0 08 * * *"
+        variables:
+          - key: "TAGS"
+            value: "bb_sys"
+            variable_type: 'env_var'
+          - key: "CONTINUOUS_DEPLOYMENT"
+            value: "yes"
+            variable_type: 'env_var'
+      - ref: "master"
+        description: "cron-111"
+        cron: "0 08 * * *"
+        variables:
+          - key: "TAGS"
+            value: "bb_sys"
+            variable_type: 'env_var'
+          - key: "CONTINUOUS_DEPLOYMENT"
+            value: "yes"
+            variable_type: 'env_var'
+    variables:
+      - key: "PROJECT_VARIABLE_ENV_VAR"
+        state: "present"
+        variable_type: "env_var"
+        protected: false
+        masked: false
+        environment: "*"
+        value: |
+          Govno s jopoy
+      - key: "PROJECT_VARIABLE_FILE"
+        state: "present"
+        variable_type: "file"
+        protected: false
+        masked: false
+        environment: "*"
+        value: |
+          Govno s jopoy
+  - name: "exa125125mple-Project"
+    description: "Exampl12512512e-Project"
+    state: "present"
+    namespace: "test-namespace/gac-group0"
+    avatar: "projects/logos/nats.png"
+    clean_unmanaged_variables: true
+    ci_config_path: ".gitlab/templates/projects/ansible-playbook-v1.yml@test-namespace/main"
+    variables_file: "projects/variables/10-application.yml"
+    variables:
+      - key: "PROJECT_VARIABLE_ENV_VAR"
+        state: "present"
+        variable_type: "env_var"
+        protected: false
+        masked: false
+        environment: "*"
+        value: |
+          Govno s jopoy
+      - key: "PROJECT_VARIABLE_FILE"
+        state: "present"
+        variable_type: "file"
+        protected: false
+        masked: false
+        environment: "*"
+        value: |
+          Govno s jopoy
+  - name: "example-Proj323r5235ect"
+    description: "Examp215215le-Project"
+    state: "present"
+    namespace: "test-namespace/gac-group1"
+    avatar: "projects/logos/nats.png"
+    clean_unmanaged_variables: true
+    ci_config_path: ".gitlab/templates/projects/ansible-playbook-v1.yml@test-namespace/main"
+    variables:
+      - key: "PROJECT_VARIABLE_ENV_VAR"
+        state: "present"
+        variable_type: "env_var"
+        protected: false
+        masked: false
+        environment: "*"
+        value: |
+          Govno s jopoy
+      - key: "PROJECT_VARIABLE_FILE"
+        state: "present"
+        variable_type: "file"
+        protected: false
+        masked: false
+        environment: "*"
+        value: |
+          Govno s jopoy

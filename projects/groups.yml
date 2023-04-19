@@ -1,0 +1,122 @@
+---
+groups:
+  - name: "test-namespace"
+    namespace: "test-namespace"
+    state: "present"
+    description: "gac-group0"
+    visibility: "internal"
+    avatar: "projects/logos/domain.png"
+    clean_unmanaged_variables: true
+    variables_file: "projects/variables/10-application.yml"
+    # deploy_freeze:
+    #   - freeze_start: "0 6 * * 5"
+    #     freeze_end: "0 6 * * 1"
+    #     cron_timezone: "Europe/Moscow"
+    #   - freeze_start: "0 16 * * *"
+    #     freeze_end: "0 6 * * *"
+    #     cron_timezone: "Europe/Moscow"
+    #   - freeze_start: "* * 29 12 *"
+    #     freeze_end: "* * 9 1 *"
+    #     cron_timezone: "Europe/Moscow"
+    variables:
+      - key: "NEW_NAMESPACE_VARIABLE_ENV_VAR1"
+        state: "present"
+        variable_type: "env_var"
+        protected: false
+        masked: false
+        environment: "*"
+        value: |
+          Govno s jopoy
+      - key: "NAMESPACE_VARIABLE_FILE1"
+        state: "present"
+        variable_type: "file"
+        protected: false
+        masked: false
+        environment: "*"
+        value: |
+          Govno s jopoy
+  - name: "gac-group0"
+    namespace: "test-namespace"
+    state: "present"
+    description: "gac-group0"
+    visibility: "internal"
+    avatar: "projects/logos/chatwoot.png"
+    clean_unmanaged_variables: true
+    variables_file: "projects/variables/10-application.yml"
+    variables:
+      - key: "GROUP_VARIABLE_ENV_VAR1"
+        state: "present"
+        variable_type: "env_var"
+        protected: false
+        masked: false
+        environment: "*"
+        value: |
+          Govno s jopoy
+      - key: "GROUP_VARIABLE_FILE1"
+        state: "present"
+        variable_type: "file"
+        protected: false
+        masked: false
+        environment: "*"
+        value: |
+          Govno s jopoy
+  - name: "gac-group-in-group"
+    namespace: "test-namespace/gac-group0"
+    state: "present"
+    description: "gac-group0"
+    visibility: "internal"
+    avatar: "projects/logos/nexus.png"
+    clean_unmanaged_variables: true
+    variables_file: "projects/variables/10-application.yml"
+    variables:
+      - key: "GROUP_VARIABLE_ENV_VAR"
+        state: "present"
+        variable_type: "env_var"
+        protected: false
+        masked: false
+        environment: "*"
+        value: |
+          Govno s jopoy
+      - key: "GROUP_VARIABLE_FILE"
+        state: "present"
+        variable_type: "file"
+        protected: false
+        masked: false
+        environment: "*"
+        value: |
+          Govno s jopoy
+  - name: "gac-group1"
+    namespace: "test-namespace"
+    state: "present"
+    description: "gac-group1"
+    visibility: "internal"
+    avatar: "projects/logos/chatwoot.png"
+    clean_unmanaged_variables: true
+    variables_file: "projects/variables/10-application.yml"
+    deploy_freeze:
+      - freeze_start: "0 6 * * 5"
+        freeze_end: "0 6 * * 1"
+        cron_timezone: "Europe/Moscow"
+      - freeze_start: "0 16 * * *"
+        freeze_end: "0 6 * * *"
+        cron_timezone: "Europe/Moscow"
+      - freeze_start: "* * 29 12 *"
+        freeze_end: "* * 9 1 *"
+        cron_timezone: "Europe/Moscow"
+    variables:
+      - key: "GROUP_VARIABLE_ENV_VAR"
+        state: "present"
+        variable_type: "env_var"
+        protected: false
+        masked: false
+        environment: "*"
+        value: |
+          Govno s jopoy
+      - key: "GROUP_VARIABLE_FILE"
+        state: "present"
+        variable_type: "file"
+        protected: false
+        masked: false
+        environment: "*"
+        value: |
+          Govno s jopoy

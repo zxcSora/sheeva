@@ -1,0 +1,16 @@
+variables:
+  - key: "First_variable_From_file"
+    value: "secretvalue"
+    state: "present"
+    variable_type: "env_var"
+    protected: False
+    masked: True
+    environment: "*"
+
+  - key: "2_variable_From_file"
+    value: "secret"
+    state: "present"
+    variable_type: "file"
+    protected: False
+    masked: False
+    environment: "*"
