@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -12,8 +11,74 @@ import (
 	yaml "gopkg.in/yaml.v3"
 )
 
-func createGroup(parentId int, group config.GitlabElement, client *gitlab.Client) error {
-	var gID int
+func manageGroup(group config.GitlabElement, client *gitlab.Client) error {
+	var groupFullPath string
+	if group.Name == group.Namespace {
+		groupFullPath = group.Name
+	} else {
+		groupFullPath = group.Namespace + "/" + group.Name
+	}
+	parentID, err := GetGroupID(group.Namespace, client)
+	if groupID, err := GetGroupID(groupFullPath, client); groupID == -1 {
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error": err,
+				"Group": groupFullPath,
+			}).Warning("Group Not Found")
+			if group.State == "present" {
+				if err := createGroup(parentID, group, client); err != nil {
+					logger.WithFields(logger.Fields{
+						"Error": err,
+						"Group": groupFullPath,
+					}).Error("Error while creating group")
+					return err
+				}
+			}
+		}
+	}
+	groupID, err := GetGroupID(groupFullPath, client)
+	if group.State == "absent" {
+		return deleteGroup(group, groupID, client)
+	}
+	if group.Avatar != "" {
+		if err := uploadGroupAvatar(groupID, group.Avatar, client); err != nil {
+			logger.WithFields(logger.Fields{
+				"Error": err,
+				"Group": groupFullPath,
+			}).Error("Error while updating group avatar")
+		}
+	}
+	if group.Variables != nil || group.VariablesFile != "" {
+		ManageVariables(groupID, group, client)
+	}
+	groupData, err := getGroupData(groupID, client)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error": err,
+			"Group": groupFullPath,
+		}).Error("Error while recieving group data")
+
+	}
+	if group.DeployFreezes != nil {
+		manageFreezePeriod(client, groupData, group)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error": err,
+				"Group": groupFullPath,
+			}).Error("Error while updating freeze period")
+
+		}
+	}
+	logger.WithFields(logger.Fields{
+		"Group": groupFullPath,
+		"ID":    groupID,
+		"State": group.State,
+	}).Info("Group successfully Managed")
+
+	return nil
+}
+
+func createGroup(parentID int, group config.GitlabElement, client *gitlab.Client) error {
 	opts := gitlab.CreateGroupOptions{
 		Name:        gitlab.String(group.Name),
 		Path:        gitlab.String(group.Name),
@@ -22,144 +87,40 @@ func createGroup(parentId int, group config.GitlabElement, client *gitlab.Client
 
 	switch group.Name {
 	case group.Namespace:
-		groupId, err := GetGroupId(group.Name, client)
+		_, _, err := client.Groups.CreateGroup(&opts)
 		if err != nil {
-			_, _, err := client.Groups.CreateGroup(&opts)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":     err,
-					"Namespace": group.Name,
-				}).Error("Error while creating namespace")
-			}
-			groupId, err = GetGroupId(group.Name, client)
-			if err != nil {
-				return fmt.Errorf("Can't create a group: %s", err)
-			}
+			return err
 		}
-
-		// Мы действительно хотим видеть в логе всё про существующие
-		// неймспейсы? Возможно, что стоит понизить уровень логирования до Debug
-		logger.WithFields(logger.Fields{
-			"Namespace": group.Name,
-		}).Debug("Namespace already exists")
-		gID = groupId
-
 	default:
-		opts.ParentID = &parentId
-		groupId, err := GetGroupId(group.Namespace+"/"+group.Name, client)
+		opts.ParentID = &parentID
+		_, _, err := client.Groups.CreateGroup(&opts)
 		if err != nil {
-			_, _, err := client.Groups.CreateGroup(&opts)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error": err,
-					"Group": group.Namespace + "/" + group.Name,
-				}).Error("Error while creating group")
-			}
+			return err
 		}
-		groupId, err = GetGroupId(group.Namespace+"/"+group.Name, client)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error": err,
-				"Group": group.Namespace + "/" + group.Name,
-			}).Error("Error while getting group ID")
-		}
-		gID = groupId
-
 	}
-	if group.Avatar != "" {
-		go func(gID int, group config.GitlabElement, client *gitlab.Client) {
-			if err := uploadGroupAvatar(gID, group.Avatar, client); err != nil {
-				logger.WithFields(logger.Fields{
-					"Error": err,
-					"Group": group.Namespace + "/" + group.Name,
-				}).Error("Error while updating group avatar")
-			}
-		}(gID, group, client)
-	}
-	if group.Variables != nil && group.VariablesFile != "" {
-		go func(gID int, group config.GitlabElement, client *gitlab.Client) {
-			ManageVariables(gID, group, client)
-		}(gID, group, client)
-	}
-	groupData, err := getGroupData(gID, client)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error": err,
-			"Group": group.Namespace + "/" + group.Name,
-		}).Error("Error while updating freeze period")
-
-	}
-	manageFreezePeriod(client, groupData, group)
-	logger.WithFields(logger.Fields{
-		"Group": group.Namespace + "/" + group.Name,
-		"ID":    gID,
-		"State": group.State,
-	}).Info("Group successfully Managed")
+	manageGroup(group, client)
 	return nil
 }
 
-func deleteGroup(group config.GitlabElement, client *gitlab.Client) error {
-	switch group.Name {
-	case group.Namespace:
-		groupId, err := GetGroupId(group.Name, client)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error": err,
-				"Group": group.Name,
-			}).Warning("Namespace does not exist")
-			return err
-		}
-		if _, err := client.Groups.DeleteGroup(groupId); err != nil {
-			logger.WithFields(logger.Fields{
-				"Error": err,
-				"Group": group.Name,
-			}).Warning("Error while deleting namespace")
-			return err
-		}
-		logger.WithField("Namespace", group.Name).Info("Group successfully deleted! ")
-	default:
-		groupId, err := GetGroupId(group.Namespace+"/"+group.Name, client)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error": err,
-				"Group": group.Name,
-			}).Warning("Namespace does not exist")
-			return err
-		}
-		if _, err := client.Groups.DeleteGroup(groupId); err != nil {
-			logger.WithFields(logger.Fields{
-				"Error": err,
-				"Group": group.Namespace + "/" + group.Name,
-			}).Warning("Error while deleting group")
-			return err
-		}
-		logger.WithField("Group", group.Namespace+"/"+group.Name).Warning("Group successfully deleted! ")
+func deleteGroup(group config.GitlabElement, groupID int, client *gitlab.Client) error {
+	if _, err := client.Groups.DeleteGroup(groupID); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":   err,
+			"Group":   group.Name,
+			"GroupID": groupID,
+		}).Warning("Error while deleting namespace")
+		return err
 	}
-	return nil
-}
-
-func manageGroup(group config.GitlabElement, client *gitlab.Client) error {
-	parentGroupId, _ := GetGroupId(group.Namespace, client)
-	switch group.State {
-	case "present":
-		if err := createGroup(parentGroupId, group, client); err != nil {
-			logger.WithFields(logger.Fields{
-				"Error": err,
-				"Group": group.Name,
-			}).Warning("Error while creating namespace")
-			return err
-		}
-	case "absent":
-		return deleteGroup(group, client)
-	default:
-		return fmt.Errorf("Wrong state: %s", group.State)
-	}
+	logger.WithField("Namespace", group.Name).Info("Group successfully deleted! ")
 	return nil
 }
 
 func ManageVariables(groupID int, group config.GitlabElement, client *gitlab.Client) error {
 	if err := CleanUnmanagedVariablesGroup(groupID, client); err != nil {
-		return err
+		logger.WithFields(logger.Fields{
+			"Error": err,
+			"Group": group.Namespace + "/" + group.Name,
+		}).Warning("Error ocured while remove unamanaged variables")
 	}
 
 	variablesFile := group.VariablesFile
@@ -197,8 +158,11 @@ func ManageVariables(groupID int, group config.GitlabElement, client *gitlab.Cli
 			EnvironmentScope: gitlab.String(variable.Environment),
 		})
 		if err != nil {
-			logger.Error(err)
-			return err
+			logger.WithFields(logger.Fields{
+				"Error":    err,
+				"Group":    group.Namespace + "/" + group.Name,
+				"Variable": variable.Key,
+			}).Warning("Error ocured while create variable")
 		} else {
 			logger.WithFields(logger.Fields{
 				"Group":         group.Namespace + "/" + group.Name,
@@ -209,13 +173,9 @@ func ManageVariables(groupID int, group config.GitlabElement, client *gitlab.Cli
 	return nil
 }
 
-func GetGroupId(groupPath string, client *gitlab.Client) (int, error) {
-	group, r, err := client.Groups.GetGroup(groupPath, nil)
+func GetGroupID(groupPath string, client *gitlab.Client) (int, error) {
+	group, _, err := client.Groups.GetGroup(groupPath, nil)
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":  err,
-			"Status": r.Status,
-		}).Error(err)
 		return -1, err
 	}
 
@@ -226,13 +186,12 @@ func GetGroupId(groupPath string, client *gitlab.Client) (int, error) {
 func CleanUnmanagedVariablesGroup(groupID int, client *gitlab.Client) error {
 	vars, _, err := client.GroupVariables.ListVariables(groupID, &gitlab.ListGroupVariablesOptions{})
 	if err != nil {
-		logger.Error(err)
 		return err
 	}
 	for _, v := range vars {
 		_, err := client.GroupVariables.RemoveVariable(groupID, v.Key)
 		if err != nil {
-			logger.Error(v.Key, err)
+			return err
 		}
 
 	}
@@ -252,7 +211,6 @@ func uploadGroupAvatar(groupId int, avatarFilePath string, client *gitlab.Client
 
 	if err != nil {
 		logger.Error(err)
-		return err
 	} else {
 		logger.WithFields(logger.Fields{
 			"Group": groupId,
@@ -270,9 +228,8 @@ func manageFreezePeriod(client *gitlab.Client, group *gitlab.Group, groups confi
 			"Error":      err,
 			"Group Name": group.Name,
 		}).Error(err)
-		return
 	}
-	go createFreeze(client, repos, groups)
+	createFreeze(client, repos, groups)
 
 	subgroups, _, err := client.Groups.ListSubGroups(group.ID, nil)
 	if err != nil {
@@ -280,7 +237,7 @@ func manageFreezePeriod(client *gitlab.Client, group *gitlab.Group, groups confi
 			"Error":      err,
 			"Group Name": group.Name,
 		}).Error(err)
-		return
+
 	}
 
 	for _, subgroup := range subgroups {
@@ -296,17 +253,17 @@ func createFreeze(client *gitlab.Client, repos []*gitlab.Project, group config.G
 				"Error":      err,
 				"Group Name": repo.Name,
 			}).Error(err)
-			continue
 		}
+
 		for _, fp := range freezePeriods {
 			_, err := client.FreezePeriods.DeleteFreezePeriod(repo.ID, fp.ID)
 			if err != nil {
 				logger.WithFields(logger.Fields{
-					"Error":      err,
+					"Вагины`":    err,
 					"Group Name": repo.Name,
 				}).Error(err)
-				continue
 			}
+
 		}
 	}
 	for _, repo := range repos {
@@ -326,12 +283,12 @@ func createFreeze(client *gitlab.Client, repos []*gitlab.Project, group config.G
 		}
 	}
 }
-func getGroupData(gID int, client *gitlab.Client) (*gitlab.Group, error) {
-	parent, _, err := client.Groups.GetGroup(gID, nil)
+func getGroupData(groupID int, client *gitlab.Client) (*gitlab.Group, error) {
+	parent, _, err := client.Groups.GetGroup(groupID, nil)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":    err,
-			"Group ID": gID,
+			"Group ID": groupID,
 		}).Error(err)
 		return nil, err
 	}

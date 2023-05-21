@@ -5,7 +5,6 @@ go 1.19
 require (
 	github.com/sirupsen/logrus v1.7.0
 	github.com/xanzy/go-gitlab v0.81.0
-	golang.org/x/sync v0.1.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

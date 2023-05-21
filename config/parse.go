@@ -119,7 +119,3 @@ func ParseYaml(rootDir string) ([]GitlabElement, []GitlabElement, error) {
 
 	return groups, projects, nil
 }
-
-func ReadRootDir(rootDir string) {
-
-}
