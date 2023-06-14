@@ -1,8 +1,12 @@
 package config
 
 import (
+	"crypto/tls"
 	"flag"
+	"net"
+	"net/http"
 	"os"
+	"time"
 
 	logger "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
@@ -36,7 +40,25 @@ func LoadConfig() (string, string, string) {
 	return gitlabUrl, gitlabToken, rootDir
 }
 func CreateGitlabClient(gitlabToken, gitlabEndpoint string) (*gitlab.Client, error) {
-	gitlabClient, err := gitlab.NewClient(gitlabToken, gitlab.WithBaseURL(gitlabEndpoint+"/api/v4"))
+	httpClient := &http.Client{
+		Timeout: time.Second * 20,
+		Transport: &http.Transport{
+			MaxIdleConns:        0,
+			IdleConnTimeout:     time.Second * 20,
+			DisableCompression:  true,
+			DisableKeepAlives:   false,
+			TLSHandshakeTimeout: time.Second * 20,
+			DialContext: (&net.Dialer{
+				Timeout:   time.Second * 30,
+				KeepAlive: time.Second * 30,
+				DualStack: true,
+			}).DialContext,
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+	gitlabClient, err := gitlab.NewClient(gitlabToken, gitlab.WithBaseURL(gitlabEndpoint+"/api/v4"), gitlab.WithHTTPClient(httpClient))
 	if err != nil {
 		logger.Warning(err)
 		return nil, err

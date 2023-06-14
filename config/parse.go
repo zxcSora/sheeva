@@ -25,6 +25,7 @@ type GitlabElement struct {
 	VariablesFile      string         `yaml:"variables_file,omitempty"`
 	Variables          []Variable     `yaml:"variables,omitempty"`
 	DeployFreezes      []DeployFreeze `yaml:"deploy_freeze,omitempty"`
+	Hooks              []Hook         `yaml:"webhooks,omitempty"`
 }
 
 type DeployFreeze struct {
@@ -48,6 +49,29 @@ type Variable struct {
 	Masked       bool   `yaml:"masked,omitempty"`
 	Environment  string `yaml:"environment,omitempty"`
 	Value        string `yaml:"value"`
+}
+
+type FileVariables struct {
+	Variables []Variable `yaml:"variables,omitempty"`
+}
+
+type Hook struct {
+	ConfidentialIssuesEvents bool   `yaml:"confidential_issues_events,omitempty"`
+	ConfidentialNoteEvents   bool   `yaml:"condidential_note_events,omitempty"`
+	DeploymentEvents         bool   `yaml:"deployment_events,omitempty"`
+	EnableSSLVerification    bool   `yaml:"enable_ssl_verification,omitempty"`
+	IssuesEvents             bool   `yaml:"issues_events,omitempty"`
+	JobEvents                bool   `yaml:"job_events,omitempty"`
+	MergeRequestsEvents      bool   `yaml:"merge_requests_evenets,omitempty"`
+	NoteEvents               bool   `yaml:"note_events,omitempty"`
+	PipelineEvents           bool   `yaml:"pipeline_events,omitempty"`
+	PushEvents               bool   `yaml:"push_evenets,omitempty"`
+	PushEventsBranchFilter   string `yaml:"push_events_branch_filter,omitempty"`
+	ReleasesEvents           bool   `yaml:"releases_events,omitempty"`
+	TagPushEvents            bool   `yaml:"tag_push_events,omitempty"`
+	WikiPageEvents           bool   `yaml:"wiki_page_events,omitempty"`
+	Token                    string `yaml:"token,omitempty"`
+	URL                      string `yaml:"url,omitempty"`
 }
 
 const (
@@ -118,4 +142,18 @@ func ParseYaml(rootDir string) ([]GitlabElement, []GitlabElement, error) {
 	}
 
 	return groups, projects, nil
+}
+
+func ParseVariableFile(filePath string) (FileVariables, error) {
+	var fileVariables FileVariables
+	fileBytes, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return fileVariables, err
+	}
+
+	err = yaml.Unmarshal(fileBytes, &fileVariables)
+	if err != nil {
+		return fileVariables, err
+	}
+	return fileVariables, nil
 }

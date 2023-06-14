@@ -84,3 +84,24 @@ func ManageProjects() error {
 	wg.Wait()
 	return nil
 }
+
+func ManageFreezePeriods() error {
+	wg := &sync.WaitGroup{}
+	var counter int
+	for _, g := range groups {
+		wg.Add(1)
+		counter++
+		go func(wg *sync.WaitGroup, g config.GitlabElement) {
+			defer wg.Done()
+			if err := manageFreezePeriods(g, gitlabClient); err != nil {
+				log.Fatal(err)
+			}
+		}(wg, g)
+		if counter >= maxGorutines() {
+			wg.Wait()
+			counter = 0
+		}
+	}
+	wg.Wait()
+	return nil
+}

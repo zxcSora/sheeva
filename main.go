@@ -31,6 +31,11 @@ func main() {
 			"Error": err,
 		}).Error("Error while managing projects")
 	}
+	if err := cmd.ManageFreezePeriods(); err != nil {
+		log.WithFields(log.Fields{
+			"Error": err,
+		}).Error("Error while managing projects")
+	}
 }
 
 func init() {
