@@ -7,7 +7,7 @@
 - [x] Управлять Shedules проекта
 - [x] Управлять настройками проекта
 - [x] Управлять Deploy Freezes
-
+- [x] Управлять Web Hooks
 # Env variables:
 
 ```
