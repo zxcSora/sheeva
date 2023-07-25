@@ -13,6 +13,7 @@ import (
 
 type GitlabElement struct {
 	Name               string         `yaml:"name"`
+	NameOld            string         `yaml:"name_old"`
 	Namespace          string         `yaml:"namespace"`
 	NamespaceOld       string         `yaml:"namespace_old"`
 	State              string         `yaml:"state"`
@@ -26,6 +27,7 @@ type GitlabElement struct {
 	Variables          []Variable     `yaml:"variables,omitempty"`
 	DeployFreezes      []DeployFreeze `yaml:"deploy_freeze,omitempty"`
 	Hooks              []Hook         `yaml:"webhooks,omitempty"`
+	HooksFile          string         `yaml:"webhooks_file,omitempty"`
 }
 
 type DeployFreeze struct {
@@ -54,7 +56,9 @@ type Variable struct {
 type FileVariables struct {
 	Variables []Variable `yaml:"variables,omitempty"`
 }
-
+type FileHooks struct {
+	Hooks []Hook `yaml:"webhooks,omitempty"`
+}
 type Hook struct {
 	ConfidentialIssuesEvents bool   `yaml:"confidential_issues_events,omitempty"`
 	ConfidentialNoteEvents   bool   `yaml:"condidential_note_events,omitempty"`
@@ -156,4 +160,17 @@ func ParseVariableFile(filePath string) (FileVariables, error) {
 		return fileVariables, err
 	}
 	return fileVariables, nil
+}
+func ParseHooksFile(filePath string) (FileHooks, error) {
+	var FileHooks FileHooks
+	fileBytes, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return FileHooks, err
+	}
+
+	err = yaml.Unmarshal(fileBytes, &FileHooks)
+	if err != nil {
+		return FileHooks, err
+	}
+	return FileHooks, nil
 }

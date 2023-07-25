@@ -10,15 +10,26 @@ import (
 
 const defaultBranch = "master"
 
-func manageProject(project config.GitlabElement, client *gitlab.Client) error {
+func editProject(project config.GitlabElement, client *gitlab.Client) {
 	if project.NamespaceOld != "" {
-		err := TransferProject(project, client)
-		if err != nil {
+		if err := TransferProject(project, client); err != nil {
 			logger.WithFields(logger.Fields{
 				"Error": err,
 			}).Error("Error while transfering project")
 		}
 	}
+
+	if project.NameOld != "" {
+		if err := RenameProject(project, client); err != nil {
+			logger.WithFields(logger.Fields{
+				"Error": err,
+			}).Error("Error while renaming project")
+		}
+	}
+}
+
+func manageProject(project config.GitlabElement, client *gitlab.Client) error {
+	editProject(project, client)
 
 	// TODO: Переписать с нормальной обработкой ошибок
 	projectPath := project.Namespace + "/" + project.Name
@@ -128,6 +139,9 @@ func (p *ProjectNotFoundError) Error() string {
 func GetProjectId(projectPath string, client *gitlab.Client) (int, error) {
 	project, _, err := client.Projects.GetProject(projectPath, getProjectOptions())
 	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Project": projectPath,
+		}).Debug(err)
 		return -1, ProjectNotFoundErrorWithProject(projectPath)
 	}
 	return project.ID, nil

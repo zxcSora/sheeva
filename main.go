@@ -38,9 +38,28 @@ func main() {
 	}
 }
 
+func reportCaller() bool {
+	if v := os.Getenv("SHEEVA_REPORT_CALLER"); v != "" {
+		return v == "1"
+	}
+	return true
+}
+
+func disableColors() bool {
+	return os.Getenv("SHEEVA_DISABLE_COLORS") == "1"
+}
+
+func debugEnable() bool {
+	return os.Getenv("SHEEVA_DEBUG_ENABLE") == "1"
+}
+
 func init() {
-	log.SetReportCaller(true)
+	log.SetReportCaller(reportCaller())
 	log.SetFormatter(&log.TextFormatter{
-		ForceColors: true,
+		ForceColors: !disableColors(),
 	})
+
+	if debugEnable() {
+		log.SetLevel(log.DebugLevel)
+	}
 }

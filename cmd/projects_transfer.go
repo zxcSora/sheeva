@@ -7,11 +7,15 @@ import (
 	gitlab "github.com/xanzy/go-gitlab"
 )
 
+func transferProjectOptions(project config.GitlabElement) *gitlab.TransferProjectOptions {
+	return &gitlab.TransferProjectOptions{
+		Namespace: &project.Namespace,
+	}
+}
+
 func TransferProject(project config.GitlabElement, client *gitlab.Client) error {
 	projectId, _ := GetProjectId(project.NamespaceOld+"/"+project.Name, client)
-	_, _, err := client.Projects.TransferProject(projectId, &gitlab.TransferProjectOptions{
-		Namespace: &project.Namespace,
-	})
+	_, _, err := client.Projects.TransferProject(projectId, transferProjectOptions(project))
 	if err != nil {
 		return err
 	}

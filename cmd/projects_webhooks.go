@@ -7,15 +7,27 @@ import (
 	gitlab "github.com/xanzy/go-gitlab"
 )
 
-const defaultWebHookUrl = "https://example.gitlab.com/"
+const defaultWebHookUrl = "https://gitlab2matrix.bingo-boom.ru/"
 
 func EditProjectWebhooks(projectId int, project config.GitlabElement, client *gitlab.Client) error {
+	if project.HooksFile != "" {
+		fileHooks, err := config.ParseHooksFile(project.HooksFile)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   err,
+				"Project": project.Namespace + "/" + project.Name,
+			}).Error("Error ocured while parsing webhooks file")
+		}
+		project.Hooks = append(project.Hooks, fileHooks.Hooks...)
+	}
 	err := cleanUnmanagedWebHooks(projectId, project, client)
 	if err != nil {
 		return err
 	}
-	defaultHook := defaultWebHook()
-	project.Hooks = append(project.Hooks, *defaultHook)
+	if project.HooksFile == "" && project.Hooks == nil {
+		defaultHook := defaultWebHook()
+		project.Hooks = append(project.Hooks, *defaultHook)
+	}
 	for _, webhook := range project.Hooks {
 		_, _, err := client.Projects.AddProjectHook(projectId, getWebHookOptions(webhook))
 		if err != nil {
